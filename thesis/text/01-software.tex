@@ -1,0 +1,207 @@
+% ============================ %
+% Chapter: Bezpečnost softwaru %
+% Status: Final                %
+% ============================ %
+\label{software}
+
+Kryptografické knihovny spadají --- stejně jako spustitelné programy nebo webové aplikace --- pod obecnou definici softwaru. I~přes jejich mnohá specifika se na ně proto vztahují obecné poznatky o~bezpečnosti softwaru, které představíme v~této kapitole. Vzhledem k~tomu, že kód kryptografických knihoven je navíc zpravidla veřejný (tzv.~\textit{open-source}), věnujeme zvláštní pozornost právě takto vyvíjenému a~publikovanému softwaru.
+
+V~rámci této kapitoly definujeme klíčové pojmy, popíšeme tradiční přístupy k~bez\-peč\-né\-mu vývoji softwaru, a~následně provedeme rešerši literatury týkající se bezpečnosti open-source softwarových projektů a~jejich vývoje.
+
+\section{Definice}
+
+Bezpečnost softwaru (SW) je poměrně široký a~volně interpretovatelný pojem, je proto důležité ho --- alespoň pro účely této práce --- přesně vymezit. V~tomto textu vyjdeme především z~práce autorů D.~LeBlanca a~M.~Howarda~\cite{leblanc2002writing} a~jejich definic založených na \emph{CIA modelu}. Akronym CIA v~sobě zahrnuje tři žádoucí vlastnosti chráněného systému, totiž jeho důvěrnost (C --- \textit{confidentiality}), integritu (I --- \textit{integrity}) a~dostupnost (A --- \textit{availability}).
+
+\begin{definition}[Bezpečnostní zranitelnost]
+    Bezpečnostní zranitelnost v~softwaru (dále jen zranitelnost) je jakýkoli jeho nedostatek, který umožňuje útočníkovi získat neoprávněný přístup k~uživatelově systému, poškodit data v~něm nebo zamezit jeho fungování. \cite{leblanc2002writing}
+\end{definition}
+
+\begin{definition}[Bezpečný software]
+    Bezpečný je takový software, který zajišťuje důvěrnost, integritu a~dostupnost uživatelských dat a~zároveň integritu a~dostupnost výpočetních prostředků vlastníka nebo administrátora systému. \cite{leblanc2002writing}
+\end{definition}
+
+Objevené softwarové zranitelnosti jsou zpravidla publikovány skrze projekt \textit{Common Vulnerabilities and Exposures} (CVE), který spravuje sdílenou databázi zranitelností a~je de~facto mezinárodním standardem pro identifikaci zranitelností~\cite{cve-overview}. Kromě unikátního identifikátoru (CVE ID), který má právo udělit kterákoli z~partnerských organizací projektu CVE, je zranitelnostem často přidělováno hodnocení \textit{Common Vulnerability Scoring System} (CVSS), které na škále od 0 do 10 hodnotí závažnost dané zranitelnosti, a~v~některých případech identifikátor \textit{Common Weakness Enumeration} (CWE), který charakterizuje druh (programátorské, konfigurační, apod.) chyby, která danou zranitelnost zapříčinila.
+
+\section{Strategie pro zabezpečení softwaru}
+
+V~následující části popíšeme některé způsoby, kterými lze software zabezpečit, tj.\ odstranit jeho zranitelnosti nebo ještě lépe jejich vzniku už při samotném vývoji předcházet.
+
+LeBlanc a~Howard \cite{leblanc2002writing} doporučují vývojářským týmům k~bezpečnosti přistupovat proaktivně. Argumentují, že pokud se vývojáři nebudou zajímat o~bezpečný vývoj softwaru, pak jej nebudou vyvíjet bezpečně; podobně pokud nebudou organizační procesy spjaté s~vývojem zahrnovat bezpečnostní praktiky, výsledný produkt nebude bezpečný. Společnost Microsoft tento přístup implementuje skrz strategii SD\textsuperscript{3} a~framework \textit{Secure Development Lifecycle} (SDL)~\cite{mssdl}.
+
+\subsection{\texorpdfstring{SD\textsuperscript{3}}{SD3}}
+
+Strategie SD\textsuperscript{3} sestává ze tří imperativů: Software má být bezpečný ve svém návrhu (\textit{secure by design}), ve svém výchozím nastavení (\textit{secure by default}) a~má umožňovat snadnou a~bezpečnou údržbu (\textit{secure in deployment}).~\cite{leblanc2002writing}
+
+\subsubsection*{Bezpečný návrh}
+
+První imperativ vychází z~poznatku, že je jednodušší zabezpečit software, který je už od začátku navržen s~ohledem na bezpečnost, než ad hoc způsobem opravovat zranitelnosti ve špatně na\-vr\-že\-ném softwaru. V~týmu vývojářů by proto měla být dedikovaná osoba dohlížející na (a~zodpovídající za) bezpečnost produktu; spolu s~návrhem softwaru by měl být popsán model hrozeb a~produkt by měl být alespoň před zveřejněním bezpečnostně otestován.
+
+\subsubsection*{Bezpečný výchozí stav}
+
+Výchozí nastavení softwaru má být bezpečné z~prostého důvodu, že většina jeho uživatelů půjde cestou nejmenšího odporu a~zvolí právě ta nastavení, která jsou v~softwaru výchozí. (To platí nejen o~koncových uživatelích programů, ale i~o~vývojářích používajících open-source knihovny, jak uvidíme později v~této práci.) Proto se doporučuje ve výchozím stavu ponechat pouze minimální počet maximálně bezpečných funkcionalit a~zbytek případně nechat uživatele doinstalovat nebo je poskytnout v~režimu \emph{opt-in}.
+
+\subsubsection*{Bezpečná údržba}
+
+Poslední pravidlo vychází z~pozorování, že prakticky žádný netriviální software není bezchybný --- v~každém programu nebo knihovně bude dříve nebo později nalezena chyba s~potenciálními bezpečnostními dopady, a~i~kdyby ne, úkolem bezpečného vývoje softwaru je s~takovou možností počítat. Proto je potřeba zajistit jednoduchý, spolehlivý a~bezpečný mechanismus, jak k~u\-ži\-va\-te\-lům dopravit nové verze s~opravenými zranitelnostmi.
+
+\subsection{Secure Development Lifecycle}
+
+Metodika SDL částečně vychází z~SD\textsuperscript{3} a~představuje strategii pro vývoj softwaru, v~níž je důraz na bezpečnost produktu kladen už od počátečního návrhu. SDL za tímto účelem definuje 12~bezpečnostních praktik, které je v~průběhu vývoje (ale i~před jeho začátkem a~po jeho ukončení, resp.\ po vydání softwaru) třeba dodržovat.~\cite{mssdl}
+
+Před samotným začátkem vývoje radí SDL seznámit členy vývojářského týmu (včetně softwarových architektů, produktových manažerů, atd.) se základní problematikou bezpečnosti softwaru, tj.\ s~cíli a~způsobem přemýšlení útočníků. Dále radí definovat bezpečnostní požadavky a~metriky pro jejich pozdější měření a~hodnocení. Až poté mají být navrženy požadavky na funkce softwaru a~na jejich základě navržen model hrozeb (\textit{threat model}).
+
+Doporučení modelu SDL se stručně dotýkají i~používání kryptografie a~rizik plynoucích z~použití softwarových závislostí: Volba kryptografických standardů použitých pro zabezpečení dat a~komunikace má být ponechána na expertech a~pro jejich implementaci má být zvolena knihovna, která bude v~případě potíží nebo vzniku bezpečnostního incidentu snadno nahraditelná. Dále SDL radí řídit obecná rizika spojená s~použitím závislostí třetích stran, přičemž se odkazuje např.\ na návod publikovaný projektem SAFECode~\cite{safecodetpc}.
+
+Co se týče samotného procesu vývoje SW, vyžaduje SDL stanovení seznamu schválených nástrojů pro vývoj, tzn.\ překladačů a~jejich přepínačů (např.\ přísný režim kompilace), statických analyzátorů, nástrojů pro modelování hrozeb, atd. V~průběhu vývoje mají být používány techniky statické a~dynamické analýzy kódu a~před vydáním softwaru má být proveden penetrační test.
+
+Posledním aspektem bezpečného vývoje jsou reakce na nově objevené bezpečnostní problémy (\textit{incident response}). Model SDL požaduje určit kontaktní osobu pro nahlašování incidentů a~vytvořit plán pro reakci na různé typy incidentů (včetně zranitelností v~softwaru třetích stran).
+
+\subsection{Další bezpečnostní principy}
+
+Kromě konkrétních strategií LeBlanc a~Howard~\cite{leblanc2002writing} popisují několik obecných bezpečnostních principů, kterými je vhodné se při vývoji softwaru řídit. Patří mezi ně mimo jiné:
+
+\begin{itemize}
+    \item \textbf{Víceúrovňová bezpečnost} (někdy též \emph{vrstvená bezpečnost}, angl.\ \textit{defence in depth}): Tento princip tvrdí, že každý ochranný prvek jednou selže a~proto bychom se neměli spoléhat pouze na jeden bezpečnostní mechanismus, ale kombinovat jich několik.
+
+    \item \textbf{Odmítnutí bezpečnosti skrze neznalost} (angl.\ \textit{security through obscurity}): Útočníkova neznalost systému nesmí být jediným prostředkem jeho zabezpečení. Skrytí implementace bezpečnostních mechanismů může jejich prolomení ztížit, samotné k~jejímu zabezpečení ale nestačí.
+
+    \item \textbf{Selhání do bezpečného módu}: Pokud v~softwaru dojde k~chybě, její ošetření by mělo být bezpečné. Reakce na chybu by navíc neměla zbytečně prozradit příliš mnoho informací (příkladem zneužití takové slabiny je například \textit{padding oracle attack} na protokol TLS~\cite{cloudflarepaddingoracle}).
+\end{itemize}
+
+\section{Open-source a closed-source software}
+
+Poznatky z~předchozích odstavců jsou aplikovatelné na libovolný software, v~této práci budeme ale věnovat speciální pozornost bezpečnosti a~bezpečnému vývoji především jedné konkrétní třídy softwaru, který budeme označovat jako open-source a~který nyní definujeme.
+
+\subsubsection*{Open-source software}
+
+Pod anglickým termínem \emph{Open-Source Software} (OSS), česky \emph{software s~otevřeným zdrojovým kódem}, se obecně rozumí software, jehož zdrojový kód je publikovaný a~veřejně přístupný (zpravidla na internetu). Často je takový software bezplatný a~dovoluje uživatelům ho volně modifikovat a~redistribuovat~\cite{schryen2009security}, to se ale odvíjí od licence, pod kterou autoři svůj kód zveřejní, a~samo o~sobě nesouvisí s~tím, jestli je zdrojový kód veřejně přístupný. V~užším smyslu lze open-source software chápat také jako software splňující definici organizace Open Source Initiative, která kromě otevřeného zdrojového kódu od daného softwaru vyžaduje mimo jiné licenci dovolující jeho neomezenou a~bezplatnou redistribuci a~modifikaci~\cite{osidefinition}. Software splňující tuto definici je často označován jako Free Open-Source Software (FOSS, příp.\ FLOSS\footnote{Písmeno L v~akronymu FLOSS označuje francouzské slovo \textit{libre}, které má ujasňovat, že pojmem \emph{free software} se rozumí nikoli bezplatný software, ale \emph{svobodný} software.}.).
+
+Jednoznačně nejprominentnějším přínosem OSS v~dnešní době je ekonomická výhodnost jeho použití~\cite{boughton2024decomposing} --- vývojáři softwaru nemusí sami implementovat a~testovat každou funkci, kterou jejich program vyžaduje, ale mohou využít open-source implementace běžných komponent, jako je třeba webový server nebo knihovna pro manipulaci s~obrazovými daty. Průzkumy z~roku 2017 ukázaly, že na otevřeném kódu celosvětově závisí až 96~\% aplikací a~80~\% obchodních společností~\cite{wen2019security}. Přirozeným záporem použití open-source softwaru je nevyhnutelná skutečnost, že tím vývojář přistupuje na \emph{trust contract} vůči správcům této závislosti, neboli vědomě přijímá rizika, která z~použití cizího kódu plynou~\cite{boughton2024decomposing}.
+
+\subsubsection*{Closed-source software}
+
+Closed-source software je software, který není open-source, tzn.\ jeho zdrojový kód není veřejně přístupný. Closed-source software může a~nemusí být zpoplatněný a~typicky je distribuovaný v~podobě spustitelného binárního souboru~\cite{schryen2009security}.
+
+Častým omylem je domněnka, že u~closed-source programu si uživatel nemá možnost ``přečíst kód''. Ve skutečnosti má technicky znalý uživatel i~v~případě closed-source software možnost kód analyzovat pomocí technik disassemblování, příp.\ dekompilace. Problém s~tímto přístupem je, že výsledkem takového procesu může být kód na velmi nízké úrovni abstrakce (například strojový kód procesoru nebo bytecode interpretovatelný virtuálním strojem) a~navíc může být program záměrně obfuskovaný, aby porozumění jeho kódu bylo co nejobtížnější. Bezpochyby je analýza closed-source softwaru mnohem složitější a~technicky náročnější než analýza otevřeného kódu, není však nemožná.
+
+\section{Bezpečnost open-source softwaru}
+
+S~open-source softwarem se kromě otevřeného zdrojového kódu a~permisivních licencí pojí i~další specifika. Oproti ``konvenčním'' modelům vývoje softwaru jsou open-source projekty rozmanitější, co se týče různých typů vývojových procesů~\cite{scacchi2006understanding}. Vývoj open-source softwaru často probíhá distribuovaně a~podílí se na něm velký počet vývojářů, kteří pocházejí z~rozmanitých prostředí a~disponují různými úrovněmi expertízy~\cite{wen2019security}. Takový model vývoje OSS bývá označován jako ``tržištní'' a~je stavěn do kontrastu s~vývojem ``katedrálovým'', ve kterém se na vývoji podílí pouze malá, ale organizovaná skupina vývojářů~\cite{raymond1999cathedral}.
+
+Tržištní model, v~němž na vývoji softwaru spolupracují lidé z~celého světa, s~sebou ale přináší nové výzvy s~ohledem na bezpečnost. Důvěryhodnost open-source projektů závisí na různých so\-ci\-ál\-ně-tech\-nic\-kých aspektech vývoje, jako je expertíza vývojářů, kvalita použitých nástrojů, důk\-lad\-nost testovacích procesů a~bezpečná integrace nového kódu~\cite{oss-security-literature}, přičemž tyto aspekty je náročnější v~takovém modelu zajistit. Výzkum dále poukazuje na ne\-dos\-ta\-teč\-nou organizaci znalostí v~open-source projektech, která může být problematická v~kontextu toho, že přispěvatelé do OSS zaprvé nemusí mít potřebné znalosti pro identifikaci bezpečnostních rizik a~zadruhé bezpečnost nebývá jejich hlavním zájmem~\cite{wen2019security}.
+
+Vzhledem ke kritické roli otevřeného kódu v~dnešním světě a~specifikům vývojového procesu v~open-source projektech je přirozené se ptát, nakolik je takto vyvíjený software bezpečný, případně co k~jeho bezpečnosti přispívá, nebo jí naopak škodí.
+
+\subsection{Open-source vs. closed-source}
+
+Otázka, kterou se akademická debata zabývala především v~nultých letech, míří na porovnání bezpečnosti open-source a~closed-source softwaru s~cílem zjistit, jestli je jeden přístup inherentně bezpečnější než druhý~\cite{oss-security-literature}.
+
+Notorickým argumentem příznivců open-source je myšlenka, která bývá označována jako \emph{Linusův zákon}~\cite{osslinuslaw2014}. Tento termín zavedl americký programátor Eric Raymond, který v~eseji \emph{Katedrála a~tržiště} z~roku~2001 píše, že ``\textit{pokud máte dostatek očí, všechny chyby jsou průhledné}''~\cite{raymond1999cathedral}. Tím chce v~zásadě říct, že pokud je kód programu dostupný veřejně všem, pak se jistě najde dostatek lidí s~příslušnou expertízou, kteří si kód přečtou a~najdou v~něm případné chyby.
+
+Druhá strana debaty je k~této myšlence skeptická. Někteří jí oponují ve smyslu argumentu ``\textit{Ano, zdrojový kód je dostupný všem, ale čte ho někdo?}''~\cite{open-vs-closed}, jiní se odkazují na sociálně-psychologický jev \emph{difúze odpovědnosti} a~namítají, že představa Linusova zákona může v~mnoha potenciálních recenzentech kódu vyvolat dojem, že kód revidoval už někdo jiný, a~tím pádem to není potřeba dělat~\cite{osslinuslaw2014}. V~neposlední řadě se nabízí argument, že zatímco o~bezpečnostních analyticích Linusův zákon s~nadsázkou předpokládá, že budou kód studovat z~dobroty srdce, u~skutečných útočníků si můžeme být jistí, že jejich motivace veřejný kód studovat bude mnohem konkrétnější --- totiž nalezené chyby, které mohou zneužít pro vlastní zisk.
+
+Z~literární rešerše nevyplynulo žádné důvodné podezření, že by open-source software měl být z~principu bezpečnější než closed-source software, nebo naopak. Schryen~\cite{schryen2009security-debate} například uvádí, že ``\textit{se obě strany [debaty] shodují na tom, že otevřený kód usnadňuje nalézání zranitelností, neshodují se ale na tom, jaký to má vliv na bezpečnost}''. Schryen a~Kadura~\cite{open-vs-closed} poukazují na to, že v~jistém smyslu lze debatu redukovat na problém bezpečnosti skrze neznalost, kterou lze dosledovat až ke Kerckhoffsově publikaci \emph{La cryptographie militaire}~\cite{kerckhoffs1883cryptographie} z~roku~1883.
+
+\subsection{Indikátory bezpečnosti open-source kódu}
+
+Přestože akademická debata o~(ne)bezpečnosti open-source softwaru nepřinesla konkrétní závěry, podle reportu organizace MITRE se už v~roce~2006 federální vláda Spojených států amerických v~rámci své kritické infrastruktury spoléhala na více než 200 open-source balíčků~\cite{dhsbacksoss}. Dá se tedy předpokládat, že open-source software byl veřejností přijat jako srovnatelně bezpečný jako closed-source software, čemuž nasvědčuje dodnes pokračující trend adopce open-source softwaru soukromým i~veřejným sektorem.
+
+Novější literatura (cca od roku 2009 dál) se častěji věnuje konkrétním aspektům, které ovlivňují bezpečnost OSS. Empirický výzkum z~let 2011--2014~\cite{oss2011, osslinuslaw2014} ukazuje, že Linusův zákon ve vztahu k~bezpečnostním zranitelnostem obecně neplatí a~dokonce v~jistém smyslu \emph{odporuje} pozorované skutečnosti.
+
+Článek~\cite{oss2011} z~roku~2011 představuje model, který na základě statistik jednotlivých souborů kódu dokáže s~vysokou úspěšností ($>$~80~\%) predikovat, které soubory obsahují zranitelný kód. Prediktory autoři rozdělují do tří kategorií: složitost kódu, míchání kódu\footnote{V~angl.\ originále \emph{code churn}.} a~aktivita vývojářů. Výsledky demonstrují na dvou velkých open-source projektech, prohlížeči Mozilla Firefox a~jádře operačního systému Red Hat Enterprise Linux (RHEL).
+
+\begin{itemize}
+    \item \textbf{Složitost kódu:} \enskip
+        Napříč akademickou debatou panuje shoda, že složitost systémů je vý\-znam\-ným rizikem pro jejich bezpečnost~\cite{youreallyshouldnt, oss2011, impact-openssl}. Složitý kód se hůře spravuje, čte a~testuje~\cite{mccabe1976complexity} a~je proto očekávatelné, že s~rostoucí složitostí kódu bude růst počet chyb a~tedy i~zranitelností. To potvrzují i~empirické výsledky, podle nichž pozitivně koreluje se zranitelnostmi mj.\ počet řádků kódu v~souboru, počet deklarací a~definovaných funkcí, cyklomatická složitost kódu, maximální úroveň vnoření kódu nebo také počet vstupních a~výstupních parametrů funkcí.
+    \item \textbf{Míchání kódu:} \enskip
+        Tato kategorie metrik vychází ze zjištění~\cite{nagappan2005use, graves2000predicting}, že s~každou změnou v~kódu roste riziko vzniku zranitelnosti. Použité metriky měří, kolik jednotek změn (commitů) a~řádků změn soubor čítá od svého vzniku a~podobně kolik řádků kódu bylo do souboru od jeho vzniku kumulativně přidáno. Všechny tři metriky v~obou projektech pozitivně korelují se zranitelným kódem.
+    \item \textbf{Aktivita vývojářů:} \enskip
+        Zranitelný kód byl častěji obsažen v~souborech obsahujících kód vět\-ší\-ho počtu vývojářů. Dále byl častěji zranitelný kód, do kterého přispívali vývojáři, kteří zá\-ro\-veň přispívali do mnoha dalších částí projektu. Jako poslední se ukázalo být rizikové, když do kódu přispívali vývojáři, kteří nebyli pro síť přispěvatelů ``centrální''\footnote{Síť vývojářů je definovaná jako neorientovaný graf: Vrcholy v~něm odpovídají jednotlivým vývojářům a~mezi dvěma vrcholy je hrana právě tehdy, když oba odpovídající vývojáři přispěli alespoň do jednoho společného souboru. Centralita vývojáře v~síti je popsána několika metrikami, jednou z~nich je např.\ stupeň vrcholu.}.
+\end{itemize}
+
+Na popsanou studii navazuje o~tři roky později publikovaný článek \cite{osslinuslaw2014}, který přímo adresuje Linusův zákon a~na open-source projektu Chromium zkoumá vliv důkladnosti revize kódu a~míry ``sociálně-technické obeznámenosti'' vývojářů s~projektem na výskyt zranitelností ve vydaných verzích. Kromě zjištění konzistentních s~předchozím výzkumem došli autoři k~dalším překvapivým výsledkům:
+
+\begin{itemize}
+    \item \textbf{Počet recenzentů změn:} \enskip
+        Soubory se zranitelným kódem revidovalo více lidí (přepočteno na řádku kódu), konkrétně revize od 3 a~více lidí vedla k~zvýšení rizika výskytu zranitelnosti téměř dvakrát. Autoři tuto metriku zvolili na základě oficiálních doporučení pro přispívání do projektu Chromium, která vycházejí ze ``\textit{zkušenosti, že kdykoli kód revidují 3 nebo více recenzentů, dochází k~nejasnostem ohledně toho, kdo má v~procesu jakou roli}''~\cite{osslinuslaw2014}.
+        
+        Tento výsledek silně rozporuje tvrzení Linusova zákona a~podporuje argument o~difúzi odpovědnosti. Otázkou zůstává, jestli se dá vztáhnout na open-source projekty obecně, nebo jestli je způsoben nějakým neznámým specifikem projektu Chromium.
+
+    \item \textbf{Účastníci diskuzí nad změnami:} \enskip
+        Do diskuzí nad zranitelným kódem se zapojovalo celkově více lidí, zároveň se ale méně často zapojili účastníci se zkušenostmi se zranitelným kódem a~jeho opravami. Autoři toto zjištění podkládají přesvědčivou argumentací --- namítají, že v~projektu Chromium se zranitelnost vyskytla jen v~necelých 5~\% souborů, což znamená, že průměrný vývojář se nemusel vůbec za dobu svého působení v~projektu se zranitelným kódem potkat a~v~důsledku nemusí mít dostatečnou expertízu k~jeho odhalení, i~když se revize zúčastní. K~podobným závěrům, tedy že vývojáři často nejsou dostatečně kvalifikovaní na to, aby odhalili bezpečnostní problémy v~kódu, došli i~další akademici~\cite{wen2019security, open-vs-closed}. Zároveň ve světle takového argumentu nepůsobí tak neintuitivně zjištění jiné studie, že zkušenější vývojáři častěji přispívají zranitelným kódem, než vývojáři méně zkušení~\cite{bosu2014characteristics}. Z~těchto důvodů je podle autorů potřeba, aby se do revizí zapojovali účastníci, kteří mají konkrétní zkušenosti se zranitelným kódem a~dokážou identifikovat riziková místa.
+
+    \item \textbf{Důkladnost revizí:} \enskip
+        Další metrika, kterou autoři uvažovali, byl podíl ``rychlých'' revizí. ``Rychlost'' revize byla definována jako podíl počtu řádků změn v~kódu a~doby mezi otevřením a~schválením revize. Jako práh autoři na základě předchozích studií volí rychlost 200 řádků za hodinu a~argumentují, že při vyšší rychlosti není možné důkladně revidovat všechen kód.
+
+        V~tomto případě byl výsledek opačný, než autoři čekali, tj.\ zranitelný kód měl nižší podíl rychlých revizí. Platnost tohoto výsledku nicméně ohrožuje skutečnost, že ``kalendářní'' doba zpracování revizí nemusí odpovídat době, po kterou byla skutečně odváděna práce.
+
+    \item \textbf{Sociální vazby:} \enskip
+        Zranitelný kód méně často revidovali lidé, kteří už v~minulosti spolupracovali s~autorem kódu. Autoři pracují s~teorií, že přispěvatelé, kteří na revizích kódu dlouhodobě spolupracují, jsou spolu schopni lépe a~efektivněji komunikovat.
+
+        Tento sociální faktor byl zároveň statisticky vyhodnocen jako nejrizikovější, lze se proto domnívat, že i~sociální vazby vývojářů hrají v~bezpečném vývoji softwaru důležitou roli.
+\end{itemize}
+
+Rešerše literatury zabývající se vztahem mezi organizací a~financováním vývoje a~bezpečností softwaru ukázala, že tomuto tématu se výzkum příliš nevěnuje. Kromě toho, že obchodní model projektu může do velké míry vysvětlit motivaci vývojářů knihovnu vyvíjet, můžeme však rozumně předpokládat především to, že organizace se stabilním příjmem, které jsou schopné své vývojáře zaměstnat na plný úvazek, budou produkovat kvalitnější kód a~především pohotověji reagovat na bezpečnostní problémy než projekty bez full-time vývojářů.
+
+Tomu mimo jiné nasvědčuje případ kryptografické knihovny OpenSSL, kterou v~roce~2014 zasáhla kritická bezpečnostní zranitelnost CVE-2014-0160 známá též jako \emph{Heartbleed}. Zranitelnost se nacházela v~implementaci protokolu TLS, resp.\ jeho rozšíření s~názvem Heartbeat, a~spočívala v~přetečení bufferu na haldě, které dovolovalo vzdálenému útočníkovi číst libovolné množství paměti serveru~\cite{heartbleed}. Dopad této chyby byl kolosální --- podle některých odhadů jí byla dotčena až polovina populárních webových stránek používajících protokol TLS~\cite{durumeric2014matter}.
+
+Waldenova~\cite{impact-openssl} analýza organizačně-technických změn v~organizaci projektu OpenSSL v~období bezprostředně po tomto incidentu taktéž podporuje domněnku, že financování projektu může mít podstatný vliv na jeho bezpečnost. V~době ``před Heartbleedem'' byl projekt OpenSSL z~hlediska vývoje neaktivní, nezaměstnával žádné vývojáře na plný úvazek a~neměl nijak definované politiky pro reakce na bezpečnostní incidenty, vydávání nových verzí a~podporu verzí neaktuálních. Po roce 2014 (v~reakci na Heartbleed) se díky sponzorství iniciativy Open Source Security Foundation (OpenSSF, dříve Core Infrastructure Initiative, CII) povedlo tým vývojářů rozšířit ze 2 na 15 (z~nichž 4 se stali zaměstnanci na plný úvazek) a~v~následujících letech byly formalizovány politiky pro přispívání do kódu, procesy pro opravování bezpečnostních zranitelností i~plán pro vydávání nových verzí. Projekt zavedl požadavky na formátování kódu, kód knihovny byl zredukován a~zpřehledněn, byly adoptovány techniky měření pokrytí kódu testy a~knihovna byla několikrát auditována třetí stranou --- v~roce~2016 iniciativou Open Crypto Audit Project a~později v~roce~2019 neziskovou společností Open Source Technology Improvement Fund. Oba audity zahrnovaly manuální revizi kódu a~testování technikou \emph{fuzzing}.~\cite{impact-openssl}
+
+Iniciativa CII/OpenSSF zároveň několik měsíců po zveřejnění zranitelnosti Heartbleed vytvořila odznak (certifikaci) \emph{Best Practices Badge}~\cite{ciibadge} sestávající ze sady kritérií, jejichž splněním open-source projekt prokazuje, že dodržuje dobré praktiky bezpečného vývoje\footnote{Aktuální seznam všech projektů, které odznak získaly nebo ho mají v~úmyslu získat, je k~dispozici na \url{https://www.bestpractices.dev/en/projects} [cit. 2024-03-27].}. OpenSSL tento odznak získala začátkem roku 2016~\cite{impact-openssl}. Kritéria pro získání odznaku jsou rozdělená do 6~kategorií:
+
+\begin{itemize}
+    \item \textbf{Základní požadavky:} \enskip
+        Projekt musí být aktivně udržovaný, srozumitelný a~musí poskytnout svým uživatelům podstatné informace, tj.\ jak software použít, jakými mechanismy lze hlásit chyby nebo diskutovat nad změnami a~jakým způsobem je možné do kódu přispět. Software musí být licencován pod licencí typu FLOSS, musí být zdokumentovaný a~webové stránky projektu musí podporovat TLS.
+
+    \item \textbf{Správa verzování / změn v~kódu:} \enskip
+        Projekt musí mít veřejný repozitář v~nějakém verzovacím systému (např.\ git) a~u~každé změny musí být zaznamenáno, kdo a~kdy změnu provedl a~v~čem změna spočívala. Každá verze softwaru vydaná pro široké použití musí mít přiřazený unikátní identifikátor, např.\ podle metody sémantického verzování\footnote{\url{https://semver.org/lang/cs/} [cit. 2024-03-28].}. Každé vydání softwaru musí doprovázet \emph{release notes}, tj.\ dokument vysvětlující důležité změny oproti předchozí verzi, jejich dopad pro uživatele přecházející na novou verzi a~speciálně všechny bezpečnostní zranitelnosti, které nová verze opravuje a~které v~době publikace mají veřejný identifikátor (např.\ identifikátor CVE).
+
+    \item \textbf{Proces nahlašování chyb:} \enskip
+        Projekt musí uživatelům zpřístupnit mechanismus pro na\-hla\-šo\-vá\-ní chyb a~správci se musí vyjádřit alespoň k~50~\% příspěvků za posledních 2~až 12~měsíců (včetně).
+
+        Stejně tak musí být zdokumentovaný proces pro nahlašování bezpečnostních zranitelností, který by navíc, pokud to jde, měl být neveřejný (například skrze web používající TLS nebo e-mailem zašifrovaným pomocí OpenPGP).
+
+    \item \textbf{Kvalita:} \enskip
+        Pokud je potřeba software před použitím sestavit, pak musí projekt podporovat automatické sestavování ze zdrojového kódu (např.\ Make, CMake, Maven, \dots). Dále musí projekt obsahovat alespoň jednu sadu automatických testů přístupných taktéž pod FLOSS licencí a~projekt musí poskytovat srozumitelný návod pro její spuštění.
+
+        Projekt musí od nových příspěvků do kódu vyžadovat přidání odpovídajících testů do sady automatických testů a~musí prokazovat, že při nedávných změnách byla definovaná testovací politika dodržována.
+
+        U~jazyků, které to podporují, musí projekt používat ``přísný'' (někdy též ``bezpečný'') mód kompilace (např.\ přepínač \texttt{-Wall} v~překladačích gcc a~clang nebo direktiva \texttt{use strict} v~jazyce JavaScript) nebo případně používat externí nástroj pro kontrolu kódu (tzv.\ \emph{linter}). Varování produkovaná těmito nástroji by měla být adresována, tzn.\ opravena nebo označena za falešná pozitiva.
+    
+    \item \textbf{Bezpečnost:} \enskip
+        Projekt musí mít alespoň jednoho člena, který má zkušenosti s~bezpečným vývojem softwaru. (Tento požadavek je v~dokumentu~\cite{ciibadge} podrobně rozepsán.)
+        
+        Pokud projekt není primárně implementací kryptografie, pak by neměl používat vlastní implementace kryptografických algoritmů, ale měl by použít algoritmy, které byly zveřejněny a~přezkoumány experty na kryptografii. Výchozí nastavení softwaru nesmí používat zastaralé algoritmy (např.\ MD5, SHA-1, RC4, DES), ledaže je takový algoritmus záměrně použitý pro interoperabilitu se starším protokolem.
+
+        Distribuce softwaru musí zamezovat útokům typu \textit{man-in-the-middle} (MitM) a~musí zaručit autenticitu kontrolních součtů.
+
+        Projekt nesmí obsahovat neopravené zranitelnosti vážnosti \emph{medium} nebo vyšší, které jsou veřejně známé déle než 60~dní.
+
+    \item \textbf{Analýza kódu:} \enskip
+        Odznak vyžaduje použití nástroje pro statickou analýzu kódu před každým veřejným vydáním nové verze, pokud je takový nástroj pro daný programovací jazyk volně dostupný.
+
+        Dále doporučuje použití dynamické analýzy, např.\ v~podobě \emph{fuzzování}, obzvláště u~softwaru napsaného v~jazyku, který nezaručuje paměťovou bezpečnost, např.\ C a~C++.
+\end{itemize}
+
+Organizace OpenSSF také nedávno publikovala ``stručnou příručku pro hodnocení open-source softwaru'' (\emph{Concise Guide for Evaluating Open Source Software})~\cite{concise-guide-eval}, ve které je v~deseti bodech shrnuto, co může vývojář při výběru open-source softwaru udělat, aby se přesvědčil, že závislost, kterou má v~úmyslu přidat do svého projektu, není riziková. Z~jejích doporučení stojí za zmínku především následující body:
+
+\begin{itemize}
+    \item \textbf{Použití jen nutných závislostí:} \enskip
+        Stručně řečeno příručka radí nepřidávat závislosti, pokud to není nutné (například pokud stejnou funkcionalitu nabízí balíček, na kterém projekt už závisí nepřímo). Tato rada je v~souladu s~obecným principem softwarové bezpečnosti, totiž že víc kódu přirozeně zvyšuje plochu pro útok a~riziko výskytu zranitelností.
+
+    \item \textbf{Aktivní správa/vývoj projektu:} \enskip
+        Pokud je potenciální závislost zanedbávána svými autory či správci, pak je přirozeně vysoké riziko, že bude zastaralá a/nebo nebude schopná pohotově reagovat na bezpečnostní nálezy.
+
+    \item \textbf{Důraz na bezpečnost:} \enskip
+        Příručka radí zkontrolovat, že dávají vývojáři potenciální závislosti dostatečné úsilí do principů bezpečného vývoje, jako jsou automatické testy, mechanismy \emph{branch protection}, atd. Příručka nabízí heuristiky, podle kterých se dá usoudit, nakolik se vývojáři drží dobrých praktik.
+
+    \item \textbf{Bezpečnost použití:} \enskip
+        Dokument radí vyhnout se softwaru, který ve výchozím nastavení nepoužívá bezpečnostní funkce, např.\ šifrované HTTPS vs.\ nešifrované (a~neautentizované) HTTP, a~také softwaru, který v~dokumentaci nevysvětluje, jak jej má uživatel bezpečně použít.
+
+    \item \textbf{Hodnocení kódu:} \enskip
+        Autoři radí stručně zhodnotit zdrojový kód a~ujistit se například, že kód není neúplný (neobsahuje příliš mnoho ``TODO'' komentářů indikujících nedokončenou nebo neúplnou implementaci), že statická analýza kódu neodhalí závažné problémy, nebo že lze alespoň z~nedávných změn v~kódu usoudit, že je věnováno nějaké úsilí tomu, aby byl kód bezpečný.
+\end{itemize}
+
+V~této kapitole jsme shrnuli základní akademické poznatky z~oblasti bezpečnosti softwaru, přičemž jsme se zaměřili speciálně na software vyvíjený v~tržištním modelu open-source. Jako podstatné se ukazuje přistupovat k~bez\-peč\-nos\-ti proaktivně, dopředu plánovat reakce na bez\-peč\-nost\-ní incidenty, dodržovat známé bez\-peč\-nost\-ní principy, mít vývojářský tým, který je dobře seznámen s~projektem, píše přehledný a~kvalitní kód, který pravidelně a~systematicky testuje, a~začlenit do procesu vývoje experta na bezpečnost kódu, který se bude podílet na revizi změn v~kódu a~bude ručit za bez\-peč\-nost výsledného softwaru.
+
+V~následující kapitole uvedeme čtenáře do druhé významné oblasti zájmu této práce, totiž do problematiky kryptografie a~jejího bezpečného použití.

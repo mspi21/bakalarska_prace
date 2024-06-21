@@ -1,0 +1,493 @@
+% ================= %
+% Chapter: Výsledky %
+% Status: Final     %
+% ================= %
+\label{vysledky}
+
+Problém efektivního hodnocení bezpečnosti kryptografických knihoven nemá jednoduché řešení. Zdá se velmi nepravděpodobné, že bychom mohli na základě jednoduchého univerzálního kritéria určit, jestli je použití libovolné knihovny bezpečné, či nikoli. Přesto ale z~poznatků popsaných v~předchozích kapitolách vyplývá, že některé praktiky při vývoji nebo návrhu knihoven mohou rizika spojená s~jejich použitím omezit a~jejich dodržení nám tedy může poskytnout alespoň jakousi heuristiku pro odhad kvality knihovny.
+
+Poznatky formulujeme do sady kritérií napříč 5~kategoriemi, každá z~nichž bere v~potaz poněkud jinou hrozbu pro bezpečnost knihoven. První kategorie se zaobírá procesem vývoje knihovny, jehož aspekty jsou klíčové pro její \textit{důvěryhodnost}. Druhá kategorie zkoumá kvalitu kódu a~poskytuje heuristiku pro ohodnocení \textit{bezpečnosti implementace}. Dalšími dvěma kategoriemi jsou návrh API a~dokumentace --- jejich vlastnosti determinují \textit{srozumitelnost} a~\textit{bezpečnou použitelnost} knihovny. V~poslední kategorii zkoumáme alternativní zdroje informací o~použití knihovny --- Google, Stack Overflow, ChatGPT a~další --- které do velké míry ovlivňují způsob, kterým uživatelé k~použití knihovny přistoupí.
+
+\section{Kritéria pro heuristické hodnocení knihoven}
+
+Nyní představíme navrhovanou metodu pro hodnocení kryptografických knihoven. Požadavky formulujeme do jednoduchých vět v~oznamovacím způsobu tak, aby vždy bylo zřejmé, v~čem spočívá jejich splnění (preferujeme tedy například formulaci ``Výchozí hodnoty parametrů jsou bezpečné.'' oproti ``Jaké jsou výchozí hodnoty parametrů?''). Dále u~jednotlivých kritérií vy\-svět\-lí\-me jejich význam a~poskytneme doporučení pro jejich praktické ověření (tj.~co je třeba ověřit a~jak).
+
+\subsection{Vývoj a organizace knihovny}
+
+\begin{itemize}
+    \item \textbf{Knihovna je aktivně vyvíjená.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Pakliže není hodnocená knihovna aktivně vyvíjená, nelze se spolehnout na to, že nebude její implementace zastaralá nebo že bude schopná pohotově reagovat na bezpečnostní incidenty.
+        \item \textit{Ověření}: Lze vyjít z~publikace~\cite{concise-guide-eval}: Poslední stabilní verze knihovny by neměla být starší než 1~rok, projekt by měl vykazovat známky aktivity v~příspěvcích do kódu a~jeho správci by se měli vyjádřit alespoň k~50~\% legitimních podnětů od uživatelů (hlášeným chybám, návrhům na zlepšení, \dots) za posledních 2--12~měsíců (včetně).
+    \end{itemize}
+
+    \item \textbf{Knihovna vymezuje zamýšlené použití.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Knihovna musí srozumitelně sdělit svým potenciálním uživatelům, k~jakému použití je zamýšlená, na jaké úrovni abstrakce pracuje a~pro koho je určená. Jak vyplynulo z~analýz v~kapitole~\ref{analyza}, kryptografické knihovny často předpokládají od svých uživatelů určitou úroveň kryptografických znalostí, kterou ale nezanedbatelná část z~nich nedisponuje. Je proto vhodné tyto informace zřetelně komunikovat vůči uživateli skrz ``readme'', webovou stránku projektu, hlavní stránku dokumentace, apod., a~v~ideálním případě odkázat uživatele na vhodnější alternativy pro daná použití.
+
+        \item \textit{Ověření}: Knihovna by do svého popisu (v~repositáři s~kódem, dokumentaci nebo webové stránce) měla zahrnout informace o~zamýšleném použití a~publiku. Příklad takového popisu je následující: ``\textit{CryptoABC is a~cryptographic library implementing low-level cryptographic primitives. It does not guarantee security when used inappropriately and is intended for use mainly by cryptography experts to implement higher-level cryptographic protocols.}''
+    \end{itemize}
+
+    \item \textbf{Vývoj knihovny je transparentní.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Pakliže má aplikační vývojář vložit svou důvěru v~pro něj doposud neznámou knihovnu a~použít ji ve vlastním programu, je žádoucí, aby měl možnost přezkoumat proces vývoje knihovny. Podobně je vhodné, aby se mohl v~případě potíží s~použitím knihovny obrátit na správce knihovny ať už prostřednictvím mailing listu, GitHub issue, nebo jiným veřejným kanálem. V~neposlední řadě by měli správci knihovny deklarovat, jakým způsobem je možné nahlašovat případné nalezené zranitelnosti v~knihovně a~jakým způsobem na ně bude projekt reagovat.
+
+        \item \textit{Ověření}: Knihovna by měla být vyvíjena ve verzovacím systému (dnes typicky git), který uchovává informace o~autorství a~obsahu jednotlivých změn v~kódu. Webová stránka, dokumentace nebo soubor ``readme'' v~repositáři s~kódem by měl srozumitelně určit veřejný kanál pro komunikaci se správci knihovny a~rovněž (neveřejný a~zabezpečený) komunikační kanál pro nahlašování zranitelností. S~každou novou verzí musí být vydán dokument \textit{release notes} popisující především opravené zranitelnosti a~chyby, ale i~jakékoli další změny, které mohou mít pro uživatele zásadní význam.
+    \end{itemize}
+
+    \item \textbf{Je známá motivace vývojářů knihovny.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Znalost motivace správců a~vývojářů knihovny pomáhá uživateli pochopit, jaký má projekt přístup k~bezpečnosti --- pokud například knihovnu vyvíjí společnost, která na ní staví komerční software, který prodává svým zákazníkům, můžeme očekávat, že pro ni bude kvalita a~bezpečnost knihovny důležitou prioritou. Oproti tomu od knihovny, kterou vyvíjí neznámý nadšenec do programování, takové záruky nemáme --- a~nemáme dokonce ani záruku toho, že motivem takového nadšence není ve skutečnosti do knihovny umístit backdoor.
+
+        \item \textit{Ověření}: Knihovna by měla v~``readme'' nebo na webové stránce stanovit, kdo knihovnu spravuje a~jaký je jeho zájem na její bezpečnosti.
+    \end{itemize}
+
+    \item \textbf{Knihovna nemá neopravené zranitelnosti.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Málokterá knihovna nemá historicky vůbec žádné zranitelnosti, klíčové ale je, jestli jsou zranitelnosti včas opravovány. Pokud ne, není možné knihovnu použít s~o\-če\-ká\-vá\-ním její bezpečnosti.
+
+        \item \textit{Ověření}: Knihovna by podle~\cite{concise-guide-eval} neměla mít žádné neopravené zranitelnosti závažnosti \textit{medium} nebo horší, které jsou veřejně známé déle než 60 dní. V~případě kryptografických knihoven takový práh však považujeme za příliš laxní a~jako vhodnější požadavek se nám jeví, aby zranitelnosti v~kryptografických knihovnách byly opravovány nejdéle v~řádu dnů od zveřejnění. Zranitelnosti lze hledat v~CVE databázích (např.\ MITRE, NIST) nebo databázích pro specifický programovací jazyk nebo ekosystém, např.\ Rust Security Advisory Database nebo Python Software Foundation Advisory Database.
+    \end{itemize}
+
+    \item \textbf{Knihovna je široce používaná.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Pokud byla knihovna adoptována velkým počtem známých organizací nebo projektů, které mají zájem na tom, aby knihovna byla bezpečná, pak je vysoká šance, že některý z~nich už knihovnu detailněji zkoumal.
+
+        \item \textit{Ověření}: Používanost knihovny lze posoudit na základě postupů uvedených v~sekci~\ref{analyza-hledani} vyhledáním jejích reverzních závislostí. Alternativně lze vyjít ze statistik repositáře/balíčku (počet stažení, ``hvězdiček'', PR, atd.) nebo certifikací knihovny --- u~kryptografických implementací jsou směrodatné především certifikace FIPS~140.
+    \end{itemize}
+
+    \item \textbf{Kód knihovny obsahuje sadu testů.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Automatické testování kódu je naprostým minimem, se kterým bezpečný vývoj softwaru počítá. Testy musí být veřejně přístupné a~reprodukovatelné a~nové pří\-spěv\-ky do kódu knihovny musí taktéž doprovázet testy.
+
+        \item \textit{Ověření}: Dokumentace knihovny by měla popsat instrukce pro lokální spuštění testů a~měla by od nových příspěvků přítomnost testů vyžadovat. Testy by měly být přizpůsobeny kryptografickým algoritmům, například použitím testovacích vektorů z~projektu Wycheproof\footnote{Vyslovováno \textipa{['wItSIpru:f]}, \url{https://github.com/C2SP/wycheproof}.}.
+    \end{itemize}
+
+    \item \textbf{Změny reviduje úzký tým správců.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Výzkum představený v~kapitole \ref{software} poukazuje mimo jiné na důležitost sociálně-technické obeznámenosti vývojářů s~projektem --- lidé, kteří rozhodují o~přijetí kódu do projektu, by měli mít velmi dobrou představu o~struktuře a~fungování projektu. Proces revize kódu (\textit{code review}) by měl být nastaven tak, aby co nejvíce zamezoval přijetí nekvalitního a~škodlivého kódu. Knihovna by proto měla mít alespoň dva správce a~nikdo by neměl mít možnost schválit svůj vlastní kód.
+
+        \item \textit{Ověření}: Projekty, které se drží striktních pravidel pro revizi kódu, tato pravidla velmi pravděpodobně uvedou v~``readme'', v~dokumentaci nebo na webových stránkách.
+    \end{itemize}
+
+    \item \textbf{Projekt měří pokrytí kódu v~rámci CI.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Měření pokrytí kódu svědčí o~bezpečných praktikách při vývoji knihovny a~zároveň má kladný vliv na kvalitu nových příspěvků \cite{adding-sparkle}.
+
+        \item \textit{Ověření}: Měření pokrytí kódu testy se provádí zpravidla automaticky jako součást CI. Platformy jako GitHub a~GitLab dovolují zobrazit konfigurační soubory, ve kterých by knihovna měla nastavit spouštění příslušného nástroje (například \texttt{cargo-llvm-cov} v~případě jazyka Rust). Výsledek měření pak skript typicky reportuje dedikované službě, například \url{codecov.io}, která umožňuje výsledek zobrazovat v~repositáři formou odznáčku (\textit{badge}), jak ukazuje obrázek \ref{fig:badges}.
+    \end{itemize}
+
+    \begin{figure}[!h]
+        \centering
+        \includegraphics[width=0.7\textwidth]{text/media/badges-hq.png}
+        \caption[~Odznáčky knihovny rustls]{Odznáčky zobrazované v~GitHub repositáři knihovny rustls \cite{rustls-gh} reportují mj.~status průběžné integrace a~naměřené pokrytí kódu testy.}
+        \label{fig:badges}
+    \end{figure}
+
+    \item \textbf{Projekt splňuje kritéria OpenSSF Best Practices.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Projekt OpenSSF se zabývá bezpečnými praktikami vývoje OSS a~vznikl specificky za účelem hodnocení (kryptografických) open-source knihoven. Mezi kritéria získání odznaku Best Practices patří mimo jiné požadavek, aby měla knihovna dedikovanou osobu, která se specializuje na bezpečnost kódu a~která se bude aktivně podílet na revizi příspěvků do kódu.
+
+        \item \textit{Ověření}: Pokud je knihovna registrovaná v~projektu OpenSSF Best Practices, pak lze splnění kritérií snadno vyhledat na \url{https://www.bestpractices.dev/en/projects}. V~opačném případě nezbývá než se odkázat na seznam jednotlivých kritérií (dostupný na téže stránce) a~jejich splnění posoudit ručně.
+    \end{itemize}
+
+    \item \textbf{Knihovna poskytuje \textit{assurance case}.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Assurance case je v~podstatě argument, kterým správci knihovny přes\-věd\-ču\-jí uživatele, že jejich knihovna je bezpečná. Pokud knihovna takový argument nemá, je pro potenciálního uživatele složitější si udělat představu o~tom, nakolik je pro knihovnu bezpečnost prioritou. Příkladem takového argumentu může být report z~nedávno vykonaného profesionálního bezpečnostního auditu nebo popis modelu hrozeb a~způsobů, kterými se knihovna těmto hrozbám brání.
+
+        \item \textit{Ověření}: Pokud knihovna nějaký takový argument poskytuje, činí tak nejspíš v~``readme'', dokumentaci nebo na své webové stránce.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Kvalita kódu}
+
+\begin{itemize}
+    \item \textbf{Pokyny pro přispívání definují styl kódu.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Nastavení pravidel pro styl a~formátování kódu přispěvatele nutí psát kvalitnější, čitelnější a~jednodušší kód a~vede ke konzistenci napříč kódem knihovny.
+
+        \item \textit{Ověření}: Repositář s~kódem nebo dokumentace knihovny typicky obsahuje soubor nebo sekci \textit{Contributing}, která by měla popsat požadavky na kód v~nových příspěvcích.
+    \end{itemize}
+    
+    \item \textbf{Implementace používá paměťově bezpečný jazyk.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Paměťově bezpečné jazyky eliminují velmi významnou kategorii chyb, ke kterým je obzvlášť kryptografický kód náchylný~\cite{youreallyshouldnt}.
+
+        \item \textit{Ověření}: Lze například použít nástroj cloc\footnote{\url{https://github.com/AlDanial/cloc}}, který dokáže spočítat počet řádků kódu v~různých programovacích jazycích, které obsahuje zadaný adresář. Jazyky assembler, C a~C++ nejsou paměťově bezpečné; jazyky používající GC a~interpretované jazyky jsou zpravidla paměťově bezpečné. Na pomezí stojí jazyky jako Rust a~Zig: Rust ve výchozím režimu používá \textit{borrow checker}, který má paměťovou bezpečnost zaručit za doby překladu, kromě toho jazyk podporuje \textit{unsafe} konstrukce, které zodpovědnost přenáší na pro\-g\-ra\-má\-to\-ra; Jazyk Zig není sám o~sobě paměťově bezpečný, ale svým návrhem alespoň pro\-g\-ra\-má\-to\-ra vede k~podobným vzorům, které vynucuje jazyk Rust~\cite{ziglangdoc}. Způsob, kterým jazyk spravuje paměť, je zpravidla popsán v~dokumentaci/referenci jazyka.
+    \end{itemize}
+    
+    \item \textbf{Projekt používá statickou analýzu.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Statická analýza dokáže odhalit podezřelá místa v~kódu, která by mohla zapříčinit vznik chyby nebo zranitelnosti. Dostupnost nástrojů pro statickou analýzu kódu se liší jazyk od jazyka --- pro jazyk C/C++ existují například nástroje cppcheck nebo Clang Static Analyzer. O~něco dostupnějšími nástroji jsou tzv.~\textit{lintery} (např.\ clang-tidy) a~přísné módy kompilace (přepínač \texttt{-Wall} překladačů gcc a~clang nebo direktiva \texttt{use strict} v~jazyce JavaScript).
+
+        \item \textit{Ověření}: Použití statické analýzy kódu může být zmíněno v~``readme'' souboru, zahrnuto do procesu sestavení (např.\ \textit{make}, \textit{meson}) nebo do procesu CI.
+    \end{itemize}
+    
+    \item \textbf{Knihovna je fuzzována.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Fuzzing (konkrétně \textit{coverage-based fuzzing}) je druh dynamické analýzy kódu, který kód testuje inkrementálně generovanými náhodnými vstupy, jejichž struktura je upravována tak, aby testy pokryly všechny větve kódu. Jde o~zdlouhavý proces, který je na rozdíl od standardních unit testů kontinuální, v~praxi se však ukazuje jako velmi účinný a~mnoho kritických chyb bylo už tímto způsobem (obzvláště v~``paměťově nebezpečném'' kódu) v~populárním softwaru nalezeno~\cite{linux414}.
+
+        \item \textit{Ověření}: Knihovna by měla v~``readme'' nebo dokumentaci popsat, jakými nástroji je fuzzována a~odkud lze získat výsledky (tzn.~metriku pokrytí; nalezené chyby až do jejich opravení veřejné zpravidla nejsou). Relevantním je také projekt OSS Fuzz, který ve spolupráci s~OpenSSF provádí fuzz testy kódu z~projektů, které ``\textit{mají významnou uživatelskou základnu nebo jsou kritické pro globální IT infrastrukturu}''~\cite{ossfuzz-gs}, což bezpochyby kryptografické knihovny splňují.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Návrh API}
+
+\begin{itemize}
+    \item \textbf{Běžné použití je snadné a~stručné.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Složitost kódu je problematická nejen v~samotných kryptografických implementacích, ale stejně tak i~v~kódu, který kryptografii používá. Knihovna by proto měla nabízet rozhraní, které uživateli pomůže jednoduché scénáře použití implementovat snadno. Uvažme například symetrické šifrování: Knihovny často proces (de)šifrování rozdělují do tří operací --- vytvoření kontextu, postupné zpracování otevřeného (šifrového) textu a~finalizace (přidání či odstranění výplně, vytvoření autentizačního tagu, apod.). Takový přístup je nutný, pakliže uživatel potřebuje (de)šifrovat velké množství dat, které se nevejde do paměti programu nebo je potřeba je zpracovávat průběžně. V~mnoha situacích ale bude uživatel implementovat jednodušší případ, ve kterém šifruje pouze malý rozsah dat --- v~takovém případě lze redukovat riziko chyby tím, že rozhraní takovou operaci umožní vykonat jediným voláním.
+
+        Za zmínku stojí výhody tzv.~\textit{fluentních rozhraní}. Tento termín označuje návrh, ve kterém se pořadí volání funkcí/metod řídí typovým systémem jazyka, resp.\ knihovny. Uvažujme příklad šifrování symetrickou šifrou. Klasické ``nefluentní'' rozhraní pseudokódem ilustruje výpis \ref{lst:cryptoapi-classic}. Programátorovi na úrovni syntaxe, resp.\ typového systému jazyka, nic nebrání v~tom, aby vynechal některý důležitý krok nebo změnil pořadí operací, přitom chyba by se projevila až za doby běhu. Oproti tomu princip fluentního rozhraní, jehož použití ilustruje výpis \ref{lst:cryptoapi-fluent}, spočívá v~tom, že první volání (\texttt{Cipher::new}) vrátí datový typ, který má k~dispozici pouze metody použitelné na neinicializovanou šifru. Zavolání metody, která nastavuje klíč, vrátí jiný datový typ, který implementuje metody použitelné na šifru s~inicializovaným klíčem, např.\ metodu \texttt{encrypt}. Programátor používá ty metody, které potřebuje, ale zároveň je omezen tím, jaké metody jsou implementované pro typ, se kterým zrovna pracuje. Takový návrh dokáže zaručit, že na úrovni syntaxe, resp.\ typového systému jazyka, \emph{není možné} napsat zkompilovatelný kód, který porušuje pořadí volání určené knihovnou. To je mocný prostředek, jak uživateli poskytnout konfigurovatelnost, ale zároveň ho vést ke správnému a~bezpečnému použití.
+
+\begin{lstlisting}[caption={~Tradiční rozhraní pro symetrické šifrování},label={lst:cryptoapi-classic},float]
+let cipher = Cipher::new(...);
+cipher.initialize(key, iv);
+cipher.update(b"text to be encrypted...");
+let ciphertext = cipher.finalize();
+\end{lstlisting}
+
+\begin{lstlisting}[caption={~Fluentní rozhraní pro symetrické šifrování},label={lst:cryptoapi-fluent},float]
+let (ciphertext, iv) = Cipher::new(...)
+    .with_key(key)
+    .with_iv(Cipher::IV::new())
+    .encrypt(b"text to be")
+    .encrypt(b" encrypted...")
+    .done();
+\end{lstlisting}
+
+        \item \textit{Ověření}: Doporučujeme aplikovat postup popsaný v~sekci~\ref{analyza-beznepouziti}, tedy vybrat jeden žádaný kryptografický scénář a~ten minimalistickým způsobem implementovat v~kódu. Metrikou složitosti výsledného kódu může pak být počet řádek výsledného kódu, počet volání funkcí, čas strávený implementací, námaha programátora, apod.
+    \end{itemize}
+    
+    \item \textbf{Knihovna používá srozumitelné abstrakce.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Vycházíme z~4.~principu bezpečného návrhu kryptografických rozhraní~\cite{greensmith}. Knihov\-na by tedy měla používat pojmy a~koncepty, se kterými je její uživatel dobře seznámen. Splnění tohoto kritéria je zčásti subjektivní a~bude záviset na zamýšleném použití knihovny --- pro pokročilého uživatele může být nízká úroveň abstrakce srozumitelná a~žádoucí, pro kryptografického ``laika'' by ale knihovna měla poskytnout vysokoúrovňové API, které nevyžaduje pokročilé znalosti.
+
+        \item \textit{Ověření}: Podobně jako u~předchozího kritéria doporučujeme srozumitelnost API ověřit pokusem o~jeho základní použití.
+    \end{itemize}
+    
+    \item \textbf{Výchozí hodnoty parametrů jsou bezpečné.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Princip SD\textsuperscript{3} nám říká, že má software být ve výchozí konfiguraci bezpečný. Důležitost takového principu navíc podtrhují experimentální studie zkoumající přístup vývojářů k~použití kryptografie~\cite{rustcryptoapis}.
+
+        \item \textit{Ověření}: Výchozí hodnoty lze vyvodit z~dokumentace, ne vždy jsou ale explicitně popsané. Například knihovna libgcrypt nijak nespecifikuje, co se stane, pokud uživatel při inicializaci symetrické šifry nespecifikuje IV (tj.~nezavolá funkci \texttt{gcry\_cipher\_setiv}). V~takovém případě je potřeba buďto přezkoumat kód knihovny, nebo experimentálně porovnat výstupy testovacího programu. Samozřejmě lze vycházet i~ze samotné specifikace rozhraní --- v~případě, že knihovna neumožňuje uživateli přečíst IV z~kontextu šifry, nedává smysl, aby jeho výchozí hodnota byla náhodná.
+    \end{itemize}
+    
+    \item \textbf{Knihovna nabízí ``task-based'' API.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Vycházíme mimo jiné z~1.~principu Greena a~Smitha~\cite{greensmith}, který říká, že by kryptografie měla být zahrnuta do standardních knihoven tak, aby typický vývojář vůbec s~kryptografickými implementacemi nemusel interagovat. Kryptografické knihovny nad tímto sice nemají žádnou kontrolu, ale mohou alespoň poskytnout vysokoúrovňovou abstrakci, která nebude založená na použití konkrétních algoritmů, ale bude plnit určitý úkol (\textit{task}). Příkladem takové abstrakce je modul ``Fernet'' knihovny cryptography.io, který dovoluje jednoduchým způsobem vygenerovat symetrický šifrovací klíč a~autentizovaně nejen šifrovat a~dešifrovat data, ale i~je správně (de)serializovat.
+
+        \item \textit{Ověření}: Jestli knihovna poskytuje task-based API, by mělo být možné zjistit z~popisu, případně dokumentace knihovny.
+    \end{itemize}
+
+    \item \textbf{Knihovna dovoluje pokročilé použití.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Acar a~kol.~\cite{comparing2017} ve studii z~roku 2017 upozorňují, že snadno použitelné API nevede k~bezpečnému použití, pokud uživatelé nemají možnost chování knihovny přizpůsobit svým potřebám nebo použít podpůrné nebo pokročilé funkce; v~takovém případě totiž uživatel bude nucen improvizovat nebo zvolit zcela jinou knihovnu.
+
+        \item \textit{Ověření}: Definice pokročilejšího použití bude záviset na účelu knihovny: Knihovna implementující protokol TLS by například měla dovolit volbu šifrovacích algoritmů nebo použití vlastních kořenových certifikátů; knihovna poskytující task-based API pro šifrování by měla dovolit pokročilým uživatelům použít vlastní konfiguraci šifer, operačních módů, MAC funkcí nebo serializace ŠT.
+    \end{itemize}
+    
+    \item \textbf{Nebezpečné funkce jsou explicitní.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Zvolení výstražných identifikátorů pro potenciálně nebezpečné algoritmy, operačních módy nebo parametry je účinným způsobem, jak programátora na tato rizika upozornit. Navíc jsou takové identifikátory nápadné při revizi kódu.
+
+        \item \textit{Ověření}: Pro ověření tohoto kritéria je třeba identifikovat prolomené kryptografické algoritmy a~jiné zastaralé funkce, které knihovna nabízí, a~jejich identifikátory (názvy) v~kódu. Vzorový příklad představuje knihovna rustls --- například použití vlastní funkce pro ověření certifikátů obnáší nutnost použít v~kódu strukturu s~názvem \texttt{DangerousClientConfig}.
+    \end{itemize}
+    
+    \item \textbf{Mechanismus ošetření chyb je spolehlivý.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Nesprávné ošetření nastalých chyb může mít fatální následky, je proto žádoucí, aby knihovna používala mechanismus, který uživatele donutí chyby ošetřit. Vývojáři při použití kryptografických knihoven zároveň oceňují srozumitelná chybová hlášení, která jim pomohou identifikovat zdroj problému v~kódu a~problém napravit~\cite{fluentcrypto} a~chyby by proto měly být pokud možno srozumitelné i~pro uživatele bez kryptografické expertízy~\cite{comparative2023}. Chyby, které mohou při použití knihovny nastat, by nakonec měly být dostatečně granulární, aby na ně mohl uživatelem odpovídajícím způsobem reagovat (srov.~\cite{pcd-issue-320}).
+
+        \item \textit{Ověření}: Mechanismus zpracování chyb by měl vyplynout z~deklarovaného rozhraní funkcí ať už v~kódu, nebo v~dokumentaci. Nežádoucí je hlášení chyb prostřednictvím návratových kódů, které může programátor ignorovat, některé jazyky (např.~C) však lepší způsob k~dispozici nemají. Vhodným prostředkem jsou výjimky (C++, Java, Python, \dots), případně dedikované monadické typy\footnote{Typ \texttt{Result} v~Rustu, \texttt{std::expected} v~C++, apod.} v~jazycích, které programátora nutí návratové hodnoty funkcí konzumovat (Rust). Výjimky jsou obecně považovány za pomalejší z~hlediska výkonu, jejich použití je ale poměrně přímočaré; oproti tomu neobezřetným použitím monadických typů lze zapříčinit vznik závažných chyb, jak ukazuje zranitelnost ve validaci TLS certifikátů CVE-2019-15545~\cite{cve-2019-15545} způsobená nesprávným použitím metody \texttt{Result<T,~E>::map} na\-mí\-s\-to \texttt{Result<T,~E>::and\_then}.
+    \end{itemize}
+
+    \item \textbf{Rozhraní knihovny je silně typované.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Tzv.~silně typovaná rozhraní mohou uživatele navést ke správnému použití a~za doby překladu kontrolovat správnost argumentů volaných funkcí (včetně velikosti alokovaných paměťových bloků), jak jsme již popsali v~kapitole~\ref{pouziti}, a~tím předcházet chybnému použití.
+
+        \item \textit{Ověření}: Jestli knihovna poskytuje silné typy, lze usoudit z~dokumentace nebo deklarací funkcí: Slabě typovaná rozhraní kryptografické parametry přijímají formou ukazatele na pole (\texttt{unsigned char *} v~jazyce C), oproti tomu silně typovaná rozhraní pro ně budou mít zvláštní typy (např.\ \texttt{Key} nebo \texttt{struct Key}). Je potřeba mít na paměti, že výhoda silných typů je relevantní především ve staticky typovaných jazycích --- tedy takových, v~nichž je typ každé proměnné v~každém místě v~kódu známý za doby překladu.
+    \end{itemize}
+    
+    \item \textbf{Rozhraní navádí k~použití bezpečného RNG.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Generování kvalitních náhodných klíčů, hodnot nonce apod.\ je ne\-ná\-pad\-ným, ale důležitým faktorem bezpečného použití kryptografie. Knihovna by proto měla uživateli poskytnout jednoduchý způsob, jak kvalitní náhodná data generovat, a~v~nejlepším případě by neměla použití slabého generátoru vůbec dovolit. Příklad takového návrhu poskytuje knihovna ring, která definuje vlastnost \texttt{SecureRandom}. Pouze typy implementující tuto vlastnost mohou být použity jako parametry operací, které vyžadují kvalitní zdroj náhodnosti, například generování klíčů nebo podepisování s~využitím Probabilistic Signature Scheme (PSS).
+
+        \item \textit{Ověření}: Lze ověřit z~dokumentace nebo zkusmým použitím některé funkce knihovny, která závisí na kryptograficky bezpečné náhodnosti.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Dokumentace}
+
+\begin{itemize}
+    \item \textbf{Dokumentace je úplná a~přehledná.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Dokumentace slouží jako primární zdroj informací o~použití knihovny pro nové i~stávající uživatele, neměla by proto vynechat žádnou část veřejného rozhraní knihovny a~měla by být rozčleněna do sekcí tak, aby se v~ní uživatel snadno zorientoval. Žádoucí je i~funkce pro textové vyhledávání v~dokumentaci. Účel neplní dokumentace obsahující pouze automaticky generované dokumentační komentáře jednotlivých funkcí, protože taková dokumentace nijak uživateli nepomáhá začít knihovnu používat. Obecně platí, že pokud dokumentace knihovny nebude dostatečně přehledná a~srozumitelná, uživatel se s~velkou pravděpodobností spolehne na neoficiální, potenciálně nebezpečné či zavádějící zdroje informací.
+
+        \item \textit{Ověření}: Kvalita dokumentace vyplyne při použití knihovny pro implementaci jedno\-du\-ché\-ho kryptografického scénáře. Speciálně by měla knihovna vysvětlovat význam jednotlivých funkcí, jejich parametrů, návratových hodnot, a~korektně definovat chování funkcí v~mez\-ních případech, tj.~za jakých okolností vrací jakou chybu nebo jak se bude chovat, pokud budou její argumenty nesprávné.
+    \end{itemize}
+
+    \item \textbf{Dokumentace vysvětluje účel jednotlivých algoritmů.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Úplný a~správný popis jednotlivých funkcí a~struktur je nezbytnou součástí dokumentace knihovny, pro méně znalé uživatele však nemusí být zdaleka dostatečný. Dokumentace knihovny může zamezit chybnému použití (resp.\ použití nedůvěryhodných alternativních zdrojů informací) tím, že čtenáře uvede do problematiky kryptografie a~vysvětlí, za jakým účelem je možné jednotlivé algoritmy použít (tedy například, že hesla se do databází neukládají zašifrovaná, ale zahašovaná, nebo že pro šifrování heslem je potřeba z~hesla nejprve odvodit kryptografický klíč).
+
+        \item \textit{Ověření}: Dokumentace knihovny by měla (třeba na úvodní stránce) vysvětlit smysl a~účel nabízených funkcí a~nasměrovat i~méně znalé uživatele správným směrem.
+    \end{itemize}
+    
+    \item \textbf{Dokumentace poskytuje bezpečné ukázky kódu.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Ukázky kódu jsou možná nejvlivnějším faktorem z~hlediska způsobu, jakým uživatel knihovnu použije~\cite{comparing2017}. Programátor ve velkém množství případů jako první nebude hledat dokumentaci jednotlivých funkcí, ale kód, který bude moci buď přímo zkopírovat do svého programu, nebo pochopit a~opsat. Pokud takový kód nenajde v~oficiálních zdrojích, obrátí se často na zdroje jiné. Z~těchto důvodů je vysoce žádoucí, aby do\-ku\-men\-ta\-ce knihovny poskytovala bezpečné a~realistické ukázky kódu alespoň pro nejčastější případy použití.
+
+        \item \textit{Ověření}: Dokumentace knihovny by měla --- ať už na globální úrovni nebo u~jednotlivých algoritmů --- poskytnout bezpečné, srozumitelné a~realistické ukázky kódu. V~případě symetrických šifer by tedy například neměla používat natvrdo zakódované hodnoty pro klíče nebo nonce a~měla by volit bezpečné šifry a~operační módy.
+    \end{itemize}
+    
+    \item \textbf{Dokumentace varuje před nebezpečnými volbami.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Studie~\cite{comparing2017} ukázala, že pokud dá knihovna uživateli na výběr několik možností (např.\ operační módy blokových šifer), aniž by vysvětlila jejich dopady, uživatelé často zvolí nebezpečnou konfiguraci (mód ECB). Zdůraznění potenciálně nebezpečných algoritmů a~parametrů je pro bezpečné zdokumentování kryptografických knihoven klíčové.
+
+        \item \textit{Ověření}: V~případě, že knihovna nabízí potenciálně rizikové konfigurace, měla by její dokumentace explicitně tyto konfigurace výrazně označit jako nebezpečné a~vysvětlit rizika spojená s~jejich použitím.
+    \end{itemize}
+
+    \item \textbf{Dokumentace vysvětluje význam všech parametrů.}
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Vycházíme ze studie~\cite{rustcryptoapis}, která poznamenává, že chybějící vysvětlení parametrů funkcí v~dokumentaci (například význam asociovaných dat v~AEAD šifrách) vede k~tomu, že si uživatelé řešení domyslí nesprávným způsobem.
+
+        \item \textit{Ověření}: Dokumentaci lze buďto projít kompletně, nebo tento aspekt ověřit během zkus\-mé\-ho použití knihovny.
+    \end{itemize}
+    
+    \item \textbf{Dokumentace specifikuje implementaci task-based funkcí.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: V~situacích, kdy potřebuje vývojář propojit několik systémů, programovacích jazyků a/nebo knihoven, je přirozeně potřeba napříč těmito knihovnami používat stejné algoritmy a~stejné formáty dat. Task-based API poskytují jednoduché použití, ale aby je šlo použít v~symbióze s~jinou knihovnou, musí být korektně a~srozumitelně definováno, jaké algoritmy a~parametry implementace tohoto API používá.
+
+        \item \textit{Ověření}: Pokud knihovna poskytuje task-based rozhraní, měla by věnovat část dokumentace popisu a~vysvětlení jeho vnitřní implementace. Například knihovna cryptography.io takto v~dokumentaci popisuje specifikaci šifry Fernet\footnote{Tj.~použitý šifrovací algoritmus, operační mód, funkci MAC a~autentizační metodu (MAC-then-encrypt, Encrypt-then-MAC, atd.).} a~formát ``tokenů'' obsahujících serializovaný šifrový text.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Zdroje informací}
+
+\begin{itemize}
+    \item \textbf{Neoficiální zdroje nevykazují systematické bezpečnostní chyby.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Jak jsme již nastínili, dokumentace a~ostatní oficiální zdroje informací o~knihovně nejsou v~praxi jediným informačním zdrojem, se kterým vývojáři softwaru pracují. Které zdroje jsou relevantní, se může měnit v~čase, v~době psaní této práce to je především fórum Stack Overflow, návody zobrazené mezi prvními výsledky dotazů na Googlu, diskuze a~\textit{issues} na platformách GitHub nebo GitLab a~v~neposlední řadě nástroje umělé inteligence (jež zde vyčleňujeme do samostatného kritéria).
+
+        \item \textit{Ověření}: Dotazy a~diskuze na zmíněných platformách mohou analytikovi dát představu o~problémech, které její uživatelé řeší, ale i~praktikách při použití knihovny, které jsou již v~komunitě vývojářů zažité. Doporučujeme hledat pomocí klíčových slov sestávajících z~názvu knihovny a~žádané funkce, například \textit{encrypt} nebo \textit{certificate}. V~případě knihoven, jejichž název je nejednoznačný (např.\ cryptography), lze na Stack Overflow použít vyhledávání pomocí tzv.~štítků (\textit{labels}).
+    \end{itemize}
+
+    \item \textbf{Kód doporučený jazykovými modely není zranitelný.} 
+    \begin{itemize}[beginpenalty=10000]
+        \item \textit{Zdůvodnění}: Velké jazykové modely (LLM) patří dnes mezi nástroje, které jsou aplikačními vývojáři široce používány, a~jsou navíc podle dostupných informací trénované na veřejně dostupném kódu. Z~těchto důvodů nám mohou poskytnout představu, kterých chyb se mohli dopouštět vývojáři v~minulosti (ti, jejichž kód byl součástí trénovacích dat), ale i~současní a~budoucí vývojáři (ti, kteří nástroj použijí v~rámci vývoje svých programů).
+
+        \item \textit{Ověření}: Výběrem vhodného LLM (v~době vzniku této práce jsou to především ChatGPT a~GitHub Copilot), následným --- potenciálně opakovaným --- dotazováním na použití dané knihovny a~nakonec analýzou jeho výstupů lze zjistit, které aspekty použití této knihovny mohou být pro její uživatele problematické.
+    \end{itemize}
+\end{itemize}
+
+\section{Shrnutí zkoumaných knihoven}
+
+\newcommand{\yes}{\ding{51}}
+\newcommand{\kinda}{\textbf{!}}
+\newcommand{\no}{\ding{55}}
+
+Následující tabulky zobrazují výsledky aplikování popsaných kritérií na knihovny, které jsme v~této práci zkoumali, tedy OpenSSL, libgcrypt (gcrypt), rustls, ring, cryptography.io (PyCA) a~PyCryptodome (PCD). Splnění kritéria je označno symbolem ``\yes'', jeho nesplnění symbolem ``\no''. V~některých případech bylo kritérium splněno pouze částečně nebo s~výhradami; takové případy značíme vykřičníkem ``\kinda'' a~jejich výskyty vzápětí okomentujeme.
+
+Tabulka~\ref{tab:libraries-comparison-development} shrnuje organizaci a~open-source vývoj knihoven. Knihovny libgcrypt a~PyCryptodome sice popisují zamýšlené použití, ale činí tak v~sekci dokumentace, která není typicky uživatelem navštěvována, proto kritérium hodnotíme jen jako částečně splněné. Knihovna PyCryptodome je vyvíjena na platformě GitHub, ale poskytuje jen minimum informací o~procesu vývoje. Dále knihovna rustls nevlastní odznak OpenSSF, přesto drtivou většinu jeho kritérií splňuje; ring je splňuje z~82~\%. Knihovna OpenSSL byla před nějakou dobou bezpečnostně auditována, ale sama audity v~dokumentaci nijak nezmiňuje a~nijak neodkazuje na reporty z~těchto auditů.
+
+Tabulka~\ref{tab:libraries-comparison-cq} shrnuje indikátory kvality implementace knihoven a~tabulka~\ref{tab:libraries-comparison-api} srovnává relevantní aspekty návrhu API. Jak jsme již zmínili, kritérium ``srozumitelné abstrakce'' je do jisté míry subjektivní, protože se odvíjí od znalostí zamýšleného uživatele. V~tomto případě jsme toto kritérium hodnotili z~hlediska ``průměrného'' programátora bez hlubších kryptografických znalostí, kvůli čemuž jsme OpenSSL a~libgcrypt zhodnotili jako nevyhovující a~PyCryptodome a~ring jako částečně vyhovující: Srozumitelnost vy\-so\-ko\-ú\-rov\-ňo\-vé\-ho rozhraní knihovny ring snižuje chybějící implementace vlastnosti \texttt{NonceSequence} a~knihovna PyCryptodome sice neposkytuje vysokoúrovňové API, ale její použití je poměrně snadné a~výchozí hodnoty nejsou přímo nebezpečné.
+
+Potenciálně nebezpečné funkce knihovny cryptography.io jsou sice umístěny do modulu ``hazmat'', ten je ale typicky importován pouze jednou na začátku souboru a~jeho název proto nemusí být tolik do očí bijící. Z~hlediska ošetření chyb je knihovna libgcrypt omezena jazykem C, její přístup je přesto výrazně lepší než ten, který používá OpenSSL. Knihovny ring a~PyCryptodome nerozlišují dostatečně důsledně druhy chyb.
+
+Přehlednost dokumentace knihoven rustls a~ring zobrazená v~tabulce~\ref{tab:libraries-comparison-doc} je omezená standardním formátem dokumentace balíčků jazyka Rust, který má pevně danou strukturu a~může být někým vnímán jako neideální\footnote{\url{https://github.com/rustls/rustls/issues/1711\#issuecomment-1872353878} [cit. 2024-04-25]}. Ukázky kódu knihovna ring poskytuje jen v~některých modulech. Poslední dva vykřičníky v~tabulce~\ref{tab:libraries-comparison-online} poukazují na bezpečnost, ale nefunkčnost kódu, který model ChatGPT vygeneroval pro knihovny rustls a~ring.
+
+\begin{table}
+    \caption
+        [~Srovnání zkoumaných knihoven: Vývoj a~organizace]
+        {Srovnání knihoven: Vývoj a~organizace. \yes~splňuje, \kinda~částečně splňuje, \no~nesplňuje}
+    \label{tab:libraries-comparison-development}
+    
+    \centering
+
+    \bgroup
+    \def\arraystretch{1.25}
+    \begin{tabularx}{\textwidth}{|X|c|c|c|c|c|c|}
+        \hline
+        & OpenSSL & gcrypt & rustls & ring & PyCA & PCD \\
+        \hline
+        
+        Aktivní vývoj
+            & \yes & \yes & \yes & \yes & \yes & \yes \\
+        
+        Zamýšlené použití
+            & \no & \kinda & \no & \no & \yes & \kinda \\
+        
+        Transparentní vývoj
+            & \yes & \yes & \yes & \yes & \yes & \kinda \\
+
+        Motivace vývojářů
+           & \yes & \yes & \yes & \no & \no & \no \\
+
+        Absence zranitelností
+            & \yes & \yes & \yes & \yes & \yes & \yes \\
+
+        Široká používanost
+            & \yes & \yes & \yes & \yes & \yes & \yes \\
+
+        Testování
+            & \yes & \yes & \yes & \yes & \yes & \yes \\
+
+        Revize změn
+            & \yes & \yes & \yes & \no & \yes & \no \\
+
+        Pokrytí kódu
+            & \yes & \no & \yes & \yes & \no & \no \\
+
+        Odznak OpenSSF Best Practices
+            & \yes & \yes & \kinda & \kinda & \no & \no \\
+
+        Assurance case
+            & \kinda & \no & \yes & \no & \no & \no \\
+
+        \hline
+    \end{tabularx}
+    \egroup
+\end{table}
+
+\begin{table}
+    \caption
+        [~Srovnání zkoumaných knihoven: Kvalita kódu]
+        {Srovnání knihoven: Kvalita kódu. \yes~splňuje, \kinda~částečně splňuje, \no~nesplňuje}
+    \label{tab:libraries-comparison-cq}
+    
+    \centering
+
+    \bgroup
+    \def\arraystretch{1.25}
+    \begin{tabularx}{\textwidth}{|X|c|c|c|c|c|c|}
+        \hline
+        & OpenSSL & gcrypt & rustls & ring & PyCA & PCD \\
+        \hline
+        
+        Styl kódu
+            & \yes & \yes & \yes & \no & \yes & \no \\
+
+        Paměťová bezpečnost
+            & \no & \no & \yes & \no & \yes & \no \\
+
+        Statická analýza
+            & \yes & \no & \no & \no & \no & \yes \\
+
+        Fuzzing
+            & \yes & \no & \yes & \yes & \no & \no \\
+
+        \hline
+    \end{tabularx}
+    \egroup
+\end{table}
+
+\begin{table}
+    \caption
+        [~Srovnání zkoumaných knihoven: Návrh API]
+        {Srovnání knihoven: Návrh API. \yes~splňuje, \kinda~částečně splňuje, \no~nesplňuje}
+    \label{tab:libraries-comparison-api}
+    
+    \centering
+
+    \bgroup
+    \def\arraystretch{1.25}
+    \begin{tabularx}{\textwidth}{|X|c|c|c|c|c|c|}
+        \hline
+        & OpenSSL & gcrypt & rustls & ring & PyCA & PCD \\
+        \hline
+
+        Běžné použití
+            & \no & \no & \yes & \no & \yes & \yes \\
+
+        Srozumitelné abstrakce
+            & \no & \no & \yes & \kinda & \yes & \kinda \\
+
+        Výchozí hodnoty 
+            & \no & \no & \yes & \yes & \yes & \yes \\
+        
+        Task-based API
+            & \no & \no & \yes & \no & \yes & \no \\
+        
+        Pokročilé použití
+            & \yes & \yes & \yes & \yes & \yes & \yes \\
+        
+        Nebezpečné funkce
+            & \no & \no & \yes & \yes & \kinda & \no \\
+        
+        Ošetření chyb
+            & \no & \kinda & \yes & \kinda & \yes & \kinda \\
+
+        Silné typy
+            & \no & \no & \yes & \yes & N/A & N/A \\
+        
+        Bezpečné RNG
+            & \no & \no & N/A & \yes & \no & \no \\
+
+        \hline
+    \end{tabularx}
+    \egroup
+\end{table}
+
+\begin{table}
+    \caption
+        [~Srovnání zkoumaných knihoven: Dokumentace]
+        {Srovnání knihoven: Dokumentace. \yes~splňuje, \kinda~částečně splňuje, \no~nesplňuje}
+    \label{tab:libraries-comparison-doc}
+    
+    \centering
+
+    \bgroup
+    \def\arraystretch{1.25}
+    \begin{tabularx}{\textwidth}{|X|c|c|c|c|c|c|}
+        \hline
+        & OpenSSL & gcrypt & rustls & ring & PyCA & PCD \\
+        \hline
+        
+        Úplnost a~přehlednost
+            & \no & \no & \kinda & \kinda & \yes & \yes \\
+
+        Vysvětlení algoritmů
+            & \no & \no & \yes & \no & \yes & \yes \\
+
+        Ukázky kódu
+            & \no & \no & \yes & \kinda & \yes & \yes \\
+
+        Varování
+            & \no & \no & \yes & \yes & \yes & \yes \\
+
+        Vysvětlení parametrů
+            & \no & \no & N/A & \yes & \yes & \yes \\
+
+        Implementace
+            & N/A & N/A & \yes & N/A & \yes & N/A \\
+        
+        \hline
+    \end{tabularx}
+    \egroup
+\end{table}
+
+\begin{table}
+    \caption
+        [~Srovnání zkoumaných knihoven: Zdroje informací]
+        {Srovnání knihoven: Zdroje informací. \yes~splňuje, \kinda~částečně splňuje, \no~nesplňuje}
+    \label{tab:libraries-comparison-online}
+    
+    \centering
+
+    \bgroup
+    \def\arraystretch{1.25}
+    \begin{tabularx}{\textwidth}{|X|c|c|c|c|c|c|}
+        \hline
+        & OpenSSL & gcrypt & rustls & ring & PyCA & PCD \\
+        \hline
+        
+        Online diskuze
+            & \no & \no & \yes & \yes & \no & \no \\
+
+        Velké jazykové modely
+            & \no & \no & \kinda & \kinda & \yes & \yes \\
+
+        \hline
+    \end{tabularx}
+    \egroup
+\end{table}

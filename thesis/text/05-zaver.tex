@@ -1,0 +1,15 @@
+% ============== %
+% Chapter: Závěr %
+% Status: Final  %
+% ============== %
+\label{zaver}
+
+Cílem této práce bylo určit a~zhodnotit možné přístupy k~hodnocení bezpečnosti open-source knihoven poskytujících kryptografické implementace. Za tímto účelem jsme provedli rešerši literatury týkající se jednak bezpečnosti a~bez\-peč\-né\-ho vývoje open-source softwaru, jednak bezpečnosti kryptografických implementací, a~rovněž i~bezpečného a~použitelného návrhu kryptografických rozhraní. Na základě těchto souhrnných poznatků jsme zanalyzovali 6~kryptografických knihoven napříč 3~programovacími jazyky. Nakonec jsme popsali a~srovnali několik metod pro nalezení častých chyb, kterých se uživatelé dané open-source kryptografické knihovny při práci s~ní dopouští. Jako účinná se přitom ukázala analýza on-line fór pro programátory a~veřejných diskuzí k~vývoji knihovny; tuto analýzu navíc doplňujeme experimentálním přístupem využívajícím výstupy velkých jazykových modelů (GPT~3.5).
+
+Výsledkem práce je nová metoda pro snadné zhodnocení důvěryhodnosti, bezpečnosti, srozumitelnosti a~použitelnosti kryptografických knihoven sestávající z~množiny jednoduše ověřitelných kritérií napříč 5~kategoriemi, kterými jsou vývoj a~organizace knihovny, kvalita kódu, návrh API, dokumentace knihovny a~alternativní zdroje informací.
+
+Porovnání zmíněných aspektů zkoumaných knihoven poukazuje na skutečnost, že knihovny často vynikají v~jedné oblasti, ale zaostávají v~nějaké další --- jediná knihovna, která si vedla poměrně dobře ve všech kategoriích, je knihovna rustls, která je ale ze všech zkoumaných zdaleka nejúžeji zaměřená.
+
+OpenSSL a~libgcrypt, starší knihovny pro jazyk C, srozumitelně popisují procesy pro vývoj a~revizi kódu; jejich financování a~organizace je taktéž transparentní. Kamenem úrazu je ovšem jejich dokumentace, která je ne\-pře\-hled\-ná, velmi technická a~neposkytuje kvalitní příklady použití. To je navíc reflektováno v~neoficiálních zdrojích, internetových fórech a~mimo jiné ve výstupech jazykového modelu ChatGPT, který produkuje kód obsahující závažné chyby. Oproti tomu knihovny z~ekosystému jazyka Python, tj.~cryptography.io a~PyCryptodome, mají i~přes poněkud netransparentní a~amatérsky působící vývoj velmi kvalitní dokumentaci, která kromě samotného rozhraní knihovny poskytuje bezpečné a~realistické ukázky kódu, vysvětluje relevantní kryptografické koncepty a~upozorňuje na nebezpečí, která z~použití jednotlivých algoritmů mohou plynout.
+
+Nedostatkem výsledků této práce je skutečnost, že popsaná metoda pouze určuje aspekty, které nějakým způsobem přispívají k~bezpečnosti knihovny, nedokáže ale kvantitativně určit, jaká kritéria mají mít při hodnocení knihoven jakou váhu. Dále se tato práce nijak nezaobírá hledáním potenciálních příčinných souvislostí mezi jednotlivými kritérii. Řešení těchto nedostatků může být předmětem navazujících výzkumných prací.
